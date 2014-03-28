@@ -13,13 +13,17 @@ FmSqPortableUtil class
 
 
 !FmSqPortableUtil class methodsFor: 'actions' stamp: 'mu 3/24/2013 00:47'!
-addToStartUpList: aClass	Smalltalk addToStartUpList: aClass! !
+addToStartUpList: aClass
+	Smalltalk addToStartUpList: aClass! !
 
 !FmSqPortableUtil class methodsFor: 'accessing' stamp: 'mu 3/24/2013 00:47'!
-fileDoesNotExistException	^FileDoesNotExistException! !
+fileDoesNotExistException
+	^FileDoesNotExistException! !
 
 !FmSqPortableUtil class methodsFor: 'actions' stamp: 'mu 3/24/2013 00:47'!
-removeFromStartUpList: aClass	Smalltalk removeFromStartUpList: aClass! !
+removeFromStartUpList: aClass
+	Smalltalk removeFromStartUpList: aClass! !
 
 !FmSqPortableUtil class methodsFor: 'startUp' stamp: 'mu 3/26/2013 01:30'!
-startUp	FmFileIOAccessor onSystemStartUp ! !
+startUp
+	FmFileIOAccessor onSystemStartUp ! !
