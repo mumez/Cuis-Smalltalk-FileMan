@@ -1,6 +1,7 @@
-'From Cuis 4.2 of 25 July 2013 [latest update: #1969] on 26 March 2014 at 12:15:54.469578 pm'!
+'From Cuis 4.2 of 25 July 2013 [latest update: #1969] on 29 April 2014 at 10:43:08.26229 pm'!
 'Description Please enter a description for this package'!
-!provides: 'FileMan-Test' 1 0!
+!provides: 'FileMan-Test' 1 2!
+!requires: 'FileMan-Core' 1 3 nil!
 !classDefinition: #FmFileIOAccessorTest category: #'FileMan-Test'!
 TestCase subclass: #FmFileIOAccessorTest
 	instanceVariableNames: ''

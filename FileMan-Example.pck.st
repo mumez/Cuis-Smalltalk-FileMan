@@ -1,6 +1,7 @@
-'From Cuis 4.2 of 25 July 2013 [latest update: #1969] on 26 March 2014 at 12:15:52.190578 pm'!
+'From Cuis 4.2 of 25 July 2013 [latest update: #1969] on 29 April 2014 at 10:43:04.240305 pm'!
 'Description Please enter a description for this package'!
-!provides: 'FileMan-Example' 1 0!
+!provides: 'FileMan-Example' 1 2!
+!requires: 'FileMan-Core' 1 3 nil!
 !classDefinition: #FmBackgroundDirectoryEntry category: #'FileMan-Example'!
 FmDirectoryEntry subclass: #FmBackgroundDirectoryEntry
 	instanceVariableNames: ''

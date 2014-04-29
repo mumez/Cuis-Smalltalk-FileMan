@@ -1,6 +1,7 @@
-'From Cuis 4.2 of 25 July 2013 [latest update: #1969] on 26 March 2014 at 12:44:49.392578 pm'!
+'From Cuis 4.2 of 25 July 2013 [latest update: #1969] on 29 April 2014 at 10:43:01.653714 pm'!
 'Description Please enter a description for this package'!
-!provides: 'FileMan-Adaptor-FileDirectory' 1 1!
+!provides: 'FileMan-Adaptor-FileDirectory' 1 3!
+!requires: 'FileMan-Core' 1 3 nil!
 !classDefinition: #FmFileDirectoryFileIOAccessorCuis category: #'FileMan-Adaptor-FileDirectory'!
 FmFileIOAccessor subclass: #FmFileDirectoryFileIOAccessorCuis
 	instanceVariableNames: 'defaultDirectoryPath'

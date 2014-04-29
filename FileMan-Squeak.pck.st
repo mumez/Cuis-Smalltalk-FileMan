@@ -1,6 +1,7 @@
-'From Cuis 4.2 of 25 July 2013 [latest update: #1969] on 26 March 2014 at 12:09:05.179578 pm'!
+'From Cuis 4.2 of 25 July 2013 [latest update: #1969] on 29 April 2014 at 10:43:06.230681 pm'!
 'Description Please enter a description for this package'!
-!provides: 'FileMan-Squeak' 1 0!
+!provides: 'FileMan-Squeak' 1 2!
+!requires: 'FileMan-Core' 1 3 nil!
 !classDefinition: #FmSqPortableUtil category: #'FileMan-Squeak'!
 FmPortableUtil subclass: #FmSqPortableUtil
 	instanceVariableNames: ''
