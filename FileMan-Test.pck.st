@@ -1,6 +1,6 @@
-'From Cuis 4.2 of 25 July 2013 [latest update: #1969] on 29 April 2014 at 10:43:08.26229 pm'!
+'From Cuis 4.2 of 25 July 2013 [latest update: #2463] on 4 September 2015 at 12:48:23.058005 am'!
 'Description Please enter a description for this package'!
-!provides: 'FileMan-Test' 1 2!
+!provides: 'FileMan-Test' 1 4!
 !requires: 'FileMan-Core' 1 3 nil!
 !classDefinition: #FmFileIOAccessorTest category: #'FileMan-Test'!
 TestCase subclass: #FmFileIOAccessorTest
@@ -55,7 +55,7 @@ directoryEntryForTest
 randomFileName
 	^100000 atRandom asString, '.fmtst'! !
 
-!FmFileManTest methodsFor: 'testing' stamp: 'mu 3/15/2007 10:24'!
+!FmFileManTest methodsFor: 'testing' stamp: 'jmv 6/6/2015 23:23'!
 testAbsolutePath
 	"FmFileManTest debug: #testAbsolutePath"
 	| dirEntry dirEntry1 dirEntry2 dirEntry3 dirEntry4 |
@@ -71,13 +71,11 @@ testAbsolutePath
 	self should: [dirEntry2 = ':temp:a' asDirectoryEntry].
 	self should: [dirEntry2 = '\temp\a' asDirectoryEntry].
 
-	"Platform specific path tests"
-	FmFileIOAccessor default onWindows ifTrue: [
 	dirEntry3 := 'C:/temp/b' asDirectoryEntry.
 	self should: [dirEntry3 = 'C:\temp\b' asDirectoryEntry].
 	self should: [dirEntry3 = 'C::temp:b' asDirectoryEntry].
-	].
 
+	"Platform specific path tests"
 	FmFileIOAccessor default onMac ifTrue: [
 	dirEntry4 := 'Macintosh HD:tmp' asDirectoryEntry.
 	self should: [dirEntry4 = 'Macintosh HD/tmp' asDirectoryEntry].
@@ -109,6 +107,27 @@ testAtPut
 	dir recursiveDelete.
 	self should: [dir exists not]! !
 
+!FmFileManTest methodsFor: 'testing' stamp: 'jmv 6/6/2015 19:49'!
+testConcatenation
+	"
+	FmFileManTest debug: #testConcatenation
+	"
+	| dir |
+	dir := ('./subDir' asDirectoryEntry / 'aaa/bbb' / 'ccc' / 'ddd\eee' / 'fff:ggg').
+	dir at: 'test1' put: 'RecursiveDeleted!!'.
+
+	self assert: dir name = 'ggg'.
+	self assert: dir parent name = 'fff'.
+	self assert: dir parent parent name = 'eee'.
+	self assert: dir parent parent parent name = 'ddd'.
+	self assert: dir parent parent parent parent name = 'ccc'.
+	self assert: dir parent parent parent parent parent name = 'bbb'.
+	self assert: dir parent parent parent parent parent parent name = 'aaa'.
+
+	'./subDir' asDirectoryEntry recursiveDelete.
+	self shouldnt: [dir exists].
+	self shouldnt: ['./subDir' asDirectoryEntry exists].! !
+
 !FmFileManTest methodsFor: 'testing' stamp: 'mu 11/6/2006 23:17'!
 testCopy
 	"FmFileManTest debug: #testCopy" 
@@ -132,6 +151,19 @@ testCopy
 	
 	! !
 
+!FmFileManTest methodsFor: 'testing' stamp: 'jmv 6/6/2015 23:05'!
+testDefaultDirectory
+	"
+	FmFileManTest debug: #testDefaultDirectory
+	"
+	
+	| pathComponents |
+
+	self assert: '' asDirectoryEntry =  FmDirectoryEntry default.
+
+	pathComponents := '' asDirectoryEntry pathComponents.
+	self assert: pathComponents = FmDirectoryEntry default pathComponents! !
+
 !FmFileManTest methodsFor: 'testing' stamp: 'mu 11/6/2006 20:33'!
 testFileContents
 	"FmFileManTest debug: #testFileContents" 
@@ -149,6 +181,54 @@ testFileContents
 	self should: [file2 binaryContents = bytes].
 	file2 delete.
 	self should: [file2 exists not]! !
+
+!FmFileManTest methodsFor: 'testing' stamp: 'jmv 6/6/2015 23:21'!
+testIsAbsolutePathName
+	"
+	FmFileManTest debug: #testIsAbsolutePathName
+	"
+	self assert: '/' isAbsolutePathName.
+	self assert: '/temp/' isAbsolutePathName.
+	self assert: '/temp/a' isAbsolutePathName.
+	self assert: 'C:/temp/b' isAbsolutePathName.
+"	self assert: 'Macintosh HD/tmp' isAbsolutePathName."
+	
+	self deny: './' isAbsolutePathName.
+	self deny: '../' isAbsolutePathName.
+	self deny: 'afile' isAbsolutePathName.! !
+
+!FmFileManTest methodsFor: 'testing' stamp: 'jmv 6/6/2015 23:20'!
+testIsRelativePathName
+	"
+	FmFileManTest debug: #testIsRelativePathName
+	"
+	self assert: './' isRelativePathName.
+	self assert: '../' isRelativePathName.
+"	self assert: 'afile' isRelativePathName."
+	self deny: '/' isRelativePathName.
+	self deny: '/temp/' isRelativePathName.
+	self deny: '/temp/a' isRelativePathName.
+	self deny: 'C:/temp/b' isRelativePathName.
+	self deny: 'Macintosh HD/tmp' isRelativePathName.! !
+
+!FmFileManTest methodsFor: 'testing' stamp: 'jmv 6/6/2015 22:03'!
+testPathComponents
+	"
+	FmFileManTest debug: #testPathComponents
+	"
+	| pathComponents |
+
+	pathComponents := './aaa/bbb\ccc:ddd' asDirectoryEntry pathComponents.
+	pathComponents := pathComponents last: 4.
+	self assert: pathComponents asArray = #('aaa' 'bbb' 'ccc' 'ddd').
+
+	pathComponents := '/aaa/bbb\ccc:ddd' asDirectoryEntry pathComponents.
+	pathComponents := pathComponents last: 4.
+	self assert: pathComponents asArray = #('aaa' 'bbb' 'ccc' 'ddd').
+
+	pathComponents := 'aaa/bbb\ccc:ddd' asDirectoryEntry pathComponents.
+	pathComponents := pathComponents last: 4.
+	self assert: pathComponents asArray = #('aaa' 'bbb' 'ccc' 'ddd')! !
 
 !FmFileManTest methodsFor: 'testing' stamp: 'mu 11/6/2006 23:27'!
 testPipe
@@ -268,4 +348,66 @@ testStream
 
 	file1 delete.
 	self should: [file1 exists not].
+	! !
+
+!FmFileManTest methodsFor: 'testing' stamp: 'mu 9/4/2015 00:46'!
+testTryReadStream
+	"FmFileManTest debug: #testTryReadStream" 
+	| file1 readStream |
+	file1 := self randomFileName asFileEntry.
+	self deny: (file1 exists).
+
+	self should: [readStream := file1 tryReadStream] raise: FmFileIOAccessor fileDoesNotExistException.
+	self deny: (file1 exists).
+	self assert: (readStream isNil).
+	
+	readStream := file1 readStreamIfError: [:ex | 'NotExist'].
+	
+	self assert: (readStream = 'NotExist').
+	self deny: (file1 exists).
+
+	file1 assureExistence.
+	self assert: (file1 exists).
+	
+	readStream := file1 readStreamIfError: [:ex | 'NotExist'].
+	self deny: (readStream = 'NotExist').
+	
+	self assert: (readStream contents isEmpty).
+	readStream close.
+	
+	file1 delete.
+	self deny: (file1 exists).
+	
+	
+	! !
+
+!FmFileManTest methodsFor: 'testing' stamp: 'mu 9/4/2015 00:44'!
+testTryWriteStream
+	"FmFileManTest debug: #testTryWriteStream" 
+	| file1 writeStream |
+	file1 := self randomFileName asFileEntry assureExistence.
+	self assert: (file1 exists).
+
+	self should: [writeStream := file1 tryWriteStream] raise: FmFileIOAccessor fileExistsException.
+	self assert: (file1 exists).
+	self assert: (writeStream isNil).
+	
+	writeStream := file1 writeStreamIfError: [:ex | 'Exists'].
+	
+	self assert: (writeStream = 'Exists').
+	self assert: (file1 exists).
+	
+	file1 delete.
+	self deny: (file1 exists).
+	
+	writeStream := file1 writeStreamIfError: [:ex | 'Exists'].
+	self deny: (writeStream = 'Exists').
+	writeStream nextPutAll: 'Test'; close.
+	
+	self assert: (file1 textContents = 'Test').
+	
+	file1 delete.
+	self deny: (file1 exists).
+	
+	
 	! !

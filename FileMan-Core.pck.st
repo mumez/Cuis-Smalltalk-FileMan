@@ -1,6 +1,6 @@
-'From Cuis 4.2 of 25 July 2013 [latest update: #1969] on 26 March 2014 at 12:47:01.718578 pm'!
+'From Cuis 4.2 of 25 July 2013 [latest update: #2463] on 3 September 2015 at 11:27:14.163005 pm'!
 'Description Please enter a description for this package'!
-!provides: 'FileMan-Core' 1 2!
+!provides: 'FileMan-Core' 1 5!
 !classDefinition: #FmFileEntry category: #'FileMan-Core'!
 Object subclass: #FmFileEntry
 	instanceVariableNames: 'drive pathComponents parent name fileSize creationTime modificationTime isDirectory options'
@@ -98,17 +98,15 @@ asDirectoryEntry
 asDirectoryEntry: directoryEntryClass
 	^self asDirectoryEntry as: directoryEntryClass! !
 
-!String methodsFor: '*fileman-core-converting' stamp: 'mu 3/15/2007 10:24'!
+!String methodsFor: '*fileman-core-converting' stamp: 'jmv 6/6/2015 23:37'!
 asDriveName
-	(FmFileIOAccessor default onWindows and: [self beginsWithDriveLetter]) ifTrue: [
-			^self copyFrom: 1 to: 2.
-	].
+
+	FmFileIOAccessor default onWindows ifTrue: [
+		self beginsWithWindowsDriveName ifTrue: [ 
+		^self copyFrom: 1 to: 2 ]].
 
 	(FmFileIOAccessor default onMac) ifTrue: [ 
-			^self upToFirstPathSeparator
-	].
-
-! !
+		^self upToFirstPathSeparator ]! !
 
 !String methodsFor: '*fileman-core-converting' stamp: 'mu 6/11/2006 22:42'!
 asFileEntry
@@ -128,21 +126,28 @@ asPathComponents
 	tokens := self asPathTokens.
 	^tokens! !
 
-!String methodsFor: '*fileman-core-converting' stamp: 'mu 3/4/2007 11:04'!
+!String methodsFor: '*fileman-core-converting' stamp: 'jmv 6/6/2015 23:56'!
 asPathTokens
-	| tokens |
-	tokens := self findTokens: '\:/'.
-	^tokens! !
 
-!String methodsFor: '*fileman-core-testing' stamp: 'mu 3/3/2007 09:46'!
-beginsWithDriveLetter
-	self size < 2 ifTrue: [^false].
-	^self first isDriveLetter and: [self second isDriveSeparator ]! !
+	^self beginsWithWindowsDriveName
+		ifTrue: [
+			(OrderedCollection with: (self copyFrom: 1 to: 2)), 
+				((self copyFrom: 3 to: self size) findTokens: String pathSeparators) ]
+		ifFalse: [
+			self findTokens: String pathSeparators ]! !
 
 !String methodsFor: '*fileman-core-testing' stamp: 'mu 3/4/2007 10:22'!
 beginsWithPathSeparator
 	self ifEmpty: [^false].
 	^self first isPathSeparator! !
+
+!String methodsFor: '*fileman-core-testing' stamp: 'jmv 6/6/2015 23:38'!
+beginsWithWindowsDriveName
+	"Answer doesn't depend on running on Windows or not"
+	self size < 2 ifTrue: [ ^false ].
+	^self first asCharacter isDriveLetter
+		and: [ self second isDriveSeparator
+			and: [ self size = 2 or: [ self third isPathSeparator ]]]! !
 
 !String methodsFor: '*fileman-core-actions' stamp: 'mu 6/11/2006 22:12'!
 fileContents
@@ -177,27 +182,28 @@ indexOfLastPathSeparator
 				ifTrue: [^ (self size - idx) + 1]].
 	^ 0! !
 
-!String methodsFor: '*fileman-core-testing' stamp: 'mu 4/6/2008 20:36'!
+!String methodsFor: '*fileman-core-testing' stamp: 'jmv 6/6/2015 23:50'!
 isAbsolutePathName
 	| upperName |
 	self isEmpty ifTrue: [^ false].
-	('\:/' includes: self first) ifTrue: [^ true].
+	self first isPathSeparator ifTrue: [^ true].
 	upperName := self asUppercase.
 	(FmFileIOAccessor default drives
 			anySatisfy: [:each | (upperName beginsWith: each)
 					and: [| nextPos | 
 						nextPos := each size + 1 min: self size max: 1.
-						'\:/' includes: (self at: nextPos)]]) ifTrue: [^ true].
+						(self at: nextPos) isPathSeparator ]]) ifTrue: [^ true].
 	^ false! !
 
-!String methodsFor: '*fileman-core-testing' stamp: 'mu 3/15/2007 10:24'!
+!String methodsFor: '*fileman-core-testing' stamp: 'jmv 6/6/2015 23:35'!
 isDriveName
 	FmFileIOAccessor default onWindows
-		ifTrue: [^ (self size between: 2 and: 3)
-				and: [(self second = $:)
-						and: [self first asCharacter isDriveLetter]]].
+		ifTrue: [
+			^ (self size between: 2 and: 3)
+				and: [self beginsWithWindowsDriveName]].
 
-	FmFileIOAccessor default onMac ifTrue: [^FileDirectory root directoryNames includes: self].
+	FmFileIOAccessor default onMac ifTrue: [
+		^FileDirectory root directoryNames includes: self].
 
 	^false! !
 
@@ -252,6 +258,16 @@ upToLastPathSeparator
 	index = 0 ifTrue: [^self].
 	^self copyFrom: 1 to: index - 1
 	! !
+
+!String methodsFor: '*fileman-core-converting' stamp: 'jmv 6/6/2015 23:44'!
+withoutWindowsDriveName
+	^self beginsWithWindowsDriveName 
+		ifFalse: [ self ]
+		ifTrue: [ self copyFrom: 3 to: self size ]! !
+
+!String class methodsFor: '*fileman-core-constants' stamp: 'jmv 6/6/2015 23:54'!
+pathSeparators
+	^'\:/'! !
 
 !Character methodsFor: '*fileman-core-testing' stamp: 'mu 3/2/2007 21:34'!
 isDriveLetter
@@ -412,17 +428,18 @@ childrenDo: aBlock filesMatches: selectionBlock directoryMatches: dirSelectionBl
 concat: pathString
 	^self concatPathComponents: pathString asString asPathComponents.! !
 
-!FmFileEntry methodsFor: 'actions-path' stamp: 'MasashiUmezawa 7/8/2012 16:25'!
-concatPathComponents: components 
-	| entry |
-	components ifEmpty: [^self].
-
-	entry := self fileEntryClass pathComponents: (self pathComponents copy addAll: components;
-			 yourself) drive: self drive.
-
-	self isRoot ifFalse: [
-		entry parent: self asDirectoryEntry.
-	].
+!FmFileEntry methodsFor: 'actions-path' stamp: 'jmv 6/6/2015 21:13'!
+concatPathComponents: components
+	| entry entryComponents parentEntry |
+	components ifEmpty: [ ^self ].
+	parentEntry := self isRoot ifFalse: [ self ].
+	entryComponents := self pathComponents.
+	components do: [ :eachComponent |
+		entryComponents := entryComponents copyWith: eachComponent.
+		entry := self fileEntryClass pathComponents: entryComponents drive: self drive.
+		parentEntry ifNotNil: [
+			entry setParent: parentEntry asDirectoryEntry ].
+		parentEntry := entry ].
 	^entry! !
 
 !FmFileEntry methodsFor: 'private' stamp: 'mu 3/10/2008 15:52'!
@@ -750,20 +767,19 @@ pathName
 	self printPathOn: str.
 	^str contents! !
 
-!FmFileEntry methodsFor: 'initialize-release' stamp: 'mu 3/27/2007 23:12'!
+!FmFileEntry methodsFor: 'initialize-release' stamp: 'jmv 6/6/2015 21:42'!
 pathName: aString 
-	| path tokens |
+	| path tokens guessedDriveName |
 	path := aString asAbsolutePathName.
 	tokens := path findTokens: self slash.
 	tokens ifEmpty: [^ nil].
-	(self onUnix and: [path beginsWithPathSeparator]) ifTrue: [
-		^ self pathComponents: ((path beginsWith: '/') ifTrue: [tokens] ifFalse: [path asPathTokens])].
-	tokens size = 1
-		ifTrue: [
-			path isPathSeparator ifTrue: [^self].
-			self isDriveSupported
-				 ifTrue: [^self setDriveNameAndPathComponentsFrom: aString].
-			 ^self pathName: (self directoryEntryClass default concat: aString) pathName].
+	self isDriveSupported
+		 ifTrue: [
+			guessedDriveName := tokens first asDriveName.
+			guessedDriveName isDriveName
+				ifTrue: [
+					self drive: guessedDriveName.
+					tokens := tokens copyFrom: 2 to: tokens size.]].
 	self pathComponents: tokens! !
 
 !FmFileEntry methodsFor: 'actions-pipe' stamp: 'mu 10/5/2006 19:47'!
@@ -807,13 +823,12 @@ printPathOn: aStream
 		do: [:each | aStream nextPutAll: each]
 		separatedBy: [aStream nextPutAll: self slash]! !
 
-!FmFileEntry methodsFor: 'accessing-stream' stamp: 'mu 4/7/2008 16:12'!
+!FmFileEntry methodsFor: 'accessing-stream' stamp: 'mu 9/3/2015 23:09'!
 readStream
-	^ [self fileAccessor readOnlyFileNamed: self pathName]
-		on: FmFileIOAccessor fileDoesNotExistException
-		do: [:ex |
-			self assureExistence.
-			ex retry]! !
+	
+	^self readStreamIfError: [:ex |
+		self assureExistence.
+		ex retry]! !
 
 !FmFileEntry methodsFor: 'accessing-stream' stamp: 'MU 3/26/2014 12:41'!
 readStreamContents: blockWithArg 
@@ -823,6 +838,13 @@ readStreamContents: blockWithArg
 		ensure: [stream
 				ifNotNil: [:s | s close]].
 	^ conts! !
+
+!FmFileEntry methodsFor: 'accessing-stream' stamp: 'mu 9/3/2015 23:07'!
+readStreamIfError: errorHandlingBlock
+	
+	^ [self fileAccessor readOnlyFileNamed: self pathName]
+		on: FmFileIOAccessor fileDoesNotExistException
+		do: [:ex | errorHandlingBlock value: ex]! !
 
 !FmFileEntry methodsFor: 'initialize-release' stamp: 'mu 9/13/2006 19:36'!
 refresh
@@ -860,21 +882,9 @@ setContentsOf: aStream to: aStringOrBytes by: encoderName
 		ensure: [str
 				ifNotNil: [:s | s close]]! !
 
-!FmFileEntry methodsFor: 'private' stamp: 'mu 3/27/2007 23:12'!
-setDriveNameAndPathComponentsFrom: rawPathString 
-	|  guessedDriveName |
-
-	rawPathString first isPathSeparator
-		ifTrue: [^self pathComponents: (rawPathString asPathTokens)].
-
-	guessedDriveName := rawPathString asDriveName.
-	guessedDriveName isDriveName
-		ifTrue: [ | targetPathString | 
-			self drive: guessedDriveName.
-			targetPathString := rawPathString copyFrom: guessedDriveName size + 1 to: rawPathString size.
-			^self pathComponents: targetPathString asPathTokens].
-
-	^self pathComponents: (self directoryEntryClass default pathComponents copyWith: rawPathString)! !
+!FmFileEntry methodsFor: 'private' stamp: 'jmv 6/6/2015 21:09'!
+setParent: anFmFileEntry
+	parent := anFmFileEntry! !
 
 !FmFileEntry methodsFor: 'accessing-file name' stamp: 'mu 10/24/2007 23:08'!
 shortName
@@ -900,6 +910,16 @@ textContents: aString by: encoderName
 textContentsBy: encoderName 
 	^self contentsOf: self readStream by: encoderName! !
 
+!FmFileEntry methodsFor: 'accessing-stream' stamp: 'mu 9/3/2015 23:07'!
+tryReadStream
+	
+	^ self fileAccessor readOnlyFileNamed: self pathName! !
+
+!FmFileEntry methodsFor: 'accessing-stream' stamp: 'mu 9/3/2015 23:10'!
+tryWriteStream
+	self refresh.
+	^self fileAccessor newFileNamed: self pathName! !
+
 !FmFileEntry methodsFor: 'accessing-file name' stamp: 'mu 6/19/2006 23:28'!
 version
 	^self nameVersionExtension second! !
@@ -923,6 +943,14 @@ writeStreamContents: blockWithArg
 		ensure: [stream
 				ifNotNil: [:s | s close]]! !
 
+!FmFileEntry methodsFor: 'accessing-stream' stamp: 'mu 9/3/2015 23:21'!
+writeStreamIfError: errorHandlingBlock
+	self refresh.
+		
+	^[self fileAccessor newFileNamed: self pathName]
+		on: FmFileIOAccessor fileExistsException
+		do: [:ex | errorHandlingBlock value: ex]! !
+
 !FmFileEntry class methodsFor: 'factory' stamp: 'mu 3/27/2007 23:06'!
 directoryEntryClass
 	"override"
@@ -942,7 +970,7 @@ entry: bareFileEntry
 	inst initValuesFrom: bareFileEntry.
 	^inst! !
 
-!FmFileEntry class methodsFor: 'examples' stamp: 'mu 3/27/2013 23:51'!
+!FmFileEntry class methodsFor: 'examples' stamp: 'jmv 6/17/2015 11:26'!
 example1
 	"FmFileEntry example1"
 
@@ -952,7 +980,7 @@ example1
 
 	"Traditional way (Squeak)"
 	"| subDir str |
-	subDir := FileDirectory default directoryNamed: 'subDir'.
+	subDir := FileDirectory smalltalkImageDirectory directoryNamed: 'subDir'.
 	subDir assureExistence.
 	[str := subDir newFileNamed: 'file1'.
 	str nextPutAll: 'Hello!!']
@@ -1373,9 +1401,9 @@ fileEntryClass
 	"override"
 	^FmFileEntry! !
 
-!FmDirectoryEntry class methodsFor: 'instance creation' stamp: 'mu 3/14/2007 19:49'!
+!FmDirectoryEntry class methodsFor: 'instance creation' stamp: 'jmv 6/17/2015 11:47'!
 on: aFileDirectry 
-	"FmDirectory on: FileDirectory default"
+	"FmDirectory on: FileDirectory smalltalkImageDirectory"
 	
 	| inst |
 	inst := self pathName: aFileDirectry pathName.
@@ -1400,27 +1428,33 @@ root
 	"FmDirectoryEntry root"
 	^'/' asDirectoryEntry! !
 
-!FmDirectoryEntry class methodsFor: 'instance creation' stamp: 'mu 3/3/2007 10:15'!
+!FmDirectoryEntry class methodsFor: 'instance creation' stamp: 'jmv 6/6/2015 23:40'!
 roots
 	"For the systems having notion of drives"
 	"FmDirectoryEntry roots"
 	^ self drives
 		ifEmpty: [Array with: self root]
-		ifNotEmptyDo: [:drvs | drvs
+		ifNotEmpty: [:drvs | drvs
 				collect: [:each | each asFileEntry]]! !
 
-!FmFileIOAccessor methodsFor: 'actions' stamp: 'mu 4/6/2008 14:10'!
+!FmFileIOAccessor methodsFor: 'actions' stamp: 'jmv 6/7/2015 00:12'!
 asAbsolutePathName: aString
 	"Not complete, but in most cases it is OK"
 
 	| tokens curDir childPath |
+	tokens := aString asPathTokens.
 
-	aString isRelativePathName ifFalse: [^aString].
+	"Already an absolute path name? just normalize path separators"
+	aString isAbsolutePathName ifTrue: [
+		^String streamContents: [ :strm |
+			aString first isPathSeparator ifTrue: [ strm nextPutAll: self slash ].
+			tokens
+				do: [ :each | strm nextPutAll: each ]
+				separatedBy: [ strm nextPutAll: self slash ]]].
 
 	aString = '.' ifTrue: [^self defaultDirectoryPath].
 	aString = '..' ifTrue: [^self containingDirectoryPathOf: self defaultDirectoryPath].
 
-	tokens := aString asPathTokens.
 
 	curDir := self defaultDirectoryPath.
 	tokens reverseDo: [:each |
@@ -1477,17 +1511,15 @@ basicDirectoryExists: fullPathName
 concreteStreamClass
 	^FileStream concreteStream! !
 
-!FmFileIOAccessor methodsFor: 'private' stamp: 'mu 4/5/2008 13:32'!
+!FmFileIOAccessor methodsFor: 'private' stamp: 'jmv 6/6/2015 23:52'!
 containingDirectoryPathOf: pathName 
-	| lastIndex |
-	lastIndex := 0.
+
 	(((pathName isNil
 			or: [pathName isEmpty])
 			or: [pathName isPathSeparator])
 			or: [pathName isDriveName])
 		ifTrue: [^ nil].
-	'\:/' do: [:each | lastIndex := ( pathName lastIndexOf: each) max: lastIndex].
-	^ pathName copyFrom: 1 to: lastIndex - 1! !
+	^ pathName copyFrom: 1 to: pathName indexOfLastPathSeparator-1! !
 
 !FmFileIOAccessor methodsFor: 'actions' stamp: 'MU 3/26/2014 12:46'!
 copy: fromFileFullName to: toFileFullName 
@@ -1565,11 +1597,11 @@ drives
 	self onUnix ifTrue: [^#()].
 	^(self bareEntriesIn: '') collect: [:each | each name]! !
 
-!FmFileIOAccessor methodsFor: 'utilities' stamp: 'mu 4/4/2008 18:45'!
+!FmFileIOAccessor methodsFor: 'utilities' stamp: 'jmv 6/6/2015 19:19'!
 encode: encoderName on: externalStream 
 	encoderName ifNil: [^self]. "UTF-8 will be used"
-	externalStream
-		converter: (TextConverter newForEncoding: encoderName)! !
+"	externalStream
+		converter: (TextConverter newForEncoding: encoderName)"! !
 
 !FmFileIOAccessor methodsFor: 'utilities' stamp: 'mu 3/14/2007 22:43'!
 entryNamesIn: fullPath
@@ -1843,13 +1875,13 @@ default
 defaultDirectoryPath
 	^self default defaultDirectoryPath! !
 
-!FmFileIOAccessor class methodsFor: 'accessing' stamp: 'mu 3/24/2013 00:37'!
+!FmFileIOAccessor class methodsFor: 'accessing' stamp: 'jmv 6/9/2015 09:38'!
 dialectUtilClass
 	^ dialectUtilClass
-		ifNil: [| subclasses |
-			subclasses := FmPortableUtil subclasses.
-			subclasses notEmpty
-				ifTrue: [dialectUtilClass := subclasses at: 1]]! !
+		ifNil: [| subclss |
+			subclss := FmPortableUtil subclasses.
+			subclss notEmpty
+				ifTrue: [dialectUtilClass := subclss at: 1]]! !
 
 !FmFileIOAccessor class methodsFor: 'accessing' stamp: 'mu 3/24/2013 00:38'!
 dialectUtilClass: aDialectSpecificPortableUtil
@@ -1858,6 +1890,10 @@ dialectUtilClass: aDialectSpecificPortableUtil
 !FmFileIOAccessor class methodsFor: 'accessing exception' stamp: 'mu 3/24/2013 00:48'!
 fileDoesNotExistException
 	^self dialectUtilClass fileDoesNotExistException! !
+
+!FmFileIOAccessor class methodsFor: 'accessing exception' stamp: 'mu 9/3/2015 23:25'!
+fileExistsException
+	^self dialectUtilClass fileExistsException! !
 
 !FmFileIOAccessor class methodsFor: 'class initialization' stamp: 'mu 3/26/2013 01:34'!
 initDefault
@@ -1878,13 +1914,13 @@ initialize
 	self initDialectUtilClass.
 	self initDefault.! !
 
-!FmFileIOAccessor class methodsFor: 'accessing' stamp: 'mu 3/19/2013 17:46'!
+!FmFileIOAccessor class methodsFor: 'accessing' stamp: 'jmv 6/9/2015 09:38'!
 librarySpecificClass
 	^ librarySpecificClass
-		ifNil: [| subclasses |
-			subclasses := self subclasses.
-			subclasses notEmpty
-				ifTrue: [librarySpecificClass := subclasses at: 1]]! !
+		ifNil: [| subclss |
+			subclss := self subclasses.
+			subclss notEmpty
+				ifTrue: [librarySpecificClass := subclss at: 1]]! !
 
 !FmFileIOAccessor class methodsFor: 'accessing' stamp: 'mu 3/19/2013 17:44'!
 librarySpecificClass: aLibrarySpecificFileIOAccessor
@@ -1909,6 +1945,10 @@ addToStartUpList: aClass
 
 !FmPortableUtil class methodsFor: 'accessing' stamp: 'mu 3/24/2013 00:47'!
 fileDoesNotExistException
+	^nil! !
+
+!FmPortableUtil class methodsFor: 'accessing' stamp: 'mu 9/3/2015 23:26'!
+fileExistsException
 	^nil! !
 
 !FmPortableUtil class methodsFor: 'actions' stamp: 'mu 3/26/2013 01:19'!

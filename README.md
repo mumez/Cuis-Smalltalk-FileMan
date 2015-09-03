@@ -7,6 +7,8 @@ For more info, please see the Cypress repository:
 
 ## Installation ##
 
+Note: From update 2353, FileMan has already been installed in Cuis-Smalltalk-Dev image.
+
 Assuming Cuis 4.2 or higher.
 
 Copy the 'Cuis-Smalltalk-FileMan' folder to your Cuis root folder.
