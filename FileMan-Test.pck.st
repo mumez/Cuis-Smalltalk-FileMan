@@ -1,6 +1,6 @@
-'From Cuis 4.2 of 25 July 2013 [latest update: #2463] on 3 September 2015 at 10:11:10.201306 pm'!
+'From Cuis 4.2 of 25 July 2013 [latest update: #2463] on 4 September 2015 at 12:48:23.058005 am'!
 'Description Please enter a description for this package'!
-!provides: 'FileMan-Test' 1 3!
+!provides: 'FileMan-Test' 1 4!
 !requires: 'FileMan-Core' 1 3 nil!
 !classDefinition: #FmFileIOAccessorTest category: #'FileMan-Test'!
 TestCase subclass: #FmFileIOAccessorTest
@@ -348,4 +348,66 @@ testStream
 
 	file1 delete.
 	self should: [file1 exists not].
+	! !
+
+!FmFileManTest methodsFor: 'testing' stamp: 'mu 9/4/2015 00:46'!
+testTryReadStream
+	"FmFileManTest debug: #testTryReadStream" 
+	| file1 readStream |
+	file1 := self randomFileName asFileEntry.
+	self deny: (file1 exists).
+
+	self should: [readStream := file1 tryReadStream] raise: FmFileIOAccessor fileDoesNotExistException.
+	self deny: (file1 exists).
+	self assert: (readStream isNil).
+	
+	readStream := file1 readStreamIfError: [:ex | 'NotExist'].
+	
+	self assert: (readStream = 'NotExist').
+	self deny: (file1 exists).
+
+	file1 assureExistence.
+	self assert: (file1 exists).
+	
+	readStream := file1 readStreamIfError: [:ex | 'NotExist'].
+	self deny: (readStream = 'NotExist').
+	
+	self assert: (readStream contents isEmpty).
+	readStream close.
+	
+	file1 delete.
+	self deny: (file1 exists).
+	
+	
+	! !
+
+!FmFileManTest methodsFor: 'testing' stamp: 'mu 9/4/2015 00:44'!
+testTryWriteStream
+	"FmFileManTest debug: #testTryWriteStream" 
+	| file1 writeStream |
+	file1 := self randomFileName asFileEntry assureExistence.
+	self assert: (file1 exists).
+
+	self should: [writeStream := file1 tryWriteStream] raise: FmFileIOAccessor fileExistsException.
+	self assert: (file1 exists).
+	self assert: (writeStream isNil).
+	
+	writeStream := file1 writeStreamIfError: [:ex | 'Exists'].
+	
+	self assert: (writeStream = 'Exists').
+	self assert: (file1 exists).
+	
+	file1 delete.
+	self deny: (file1 exists).
+	
+	writeStream := file1 writeStreamIfError: [:ex | 'Exists'].
+	self deny: (writeStream = 'Exists').
+	writeStream nextPutAll: 'Test'; close.
+	
+	self assert: (file1 textContents = 'Test').
+	
+	file1 delete.
+	self deny: (file1 exists).
+	
+	
 	! !
