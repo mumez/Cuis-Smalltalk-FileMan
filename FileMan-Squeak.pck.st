@@ -1,6 +1,6 @@
-'From Cuis 4.2 of 25 July 2013 [latest update: #1969] on 29 April 2014 at 10:43:06.230681 pm'!
+'From Cuis 4.2 of 25 July 2013 [latest update: #2463] on 3 September 2015 at 10:27:57.268306 pm'!
 'Description Please enter a description for this package'!
-!provides: 'FileMan-Squeak' 1 2!
+!provides: 'FileMan-Squeak' 1 4!
 !requires: 'FileMan-Core' 1 3 nil!
 !classDefinition: #FmSqPortableUtil category: #'FileMan-Squeak'!
 FmPortableUtil subclass: #FmSqPortableUtil
@@ -25,6 +25,6 @@ fileDoesNotExistException
 removeFromStartUpList: aClass
 	Smalltalk removeFromStartUpList: aClass! !
 
-!FmSqPortableUtil class methodsFor: 'startUp' stamp: 'mu 3/26/2013 01:30'!
+!FmSqPortableUtil class methodsFor: 'startUp' stamp: 'mu 9/3/2015 22:27'!
 startUp
-	FmFileIOAccessor onSystemStartUp ! !
+	FmFileIOAccessor onSystemStartUp! !

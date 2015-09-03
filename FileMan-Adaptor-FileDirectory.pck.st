@@ -1,6 +1,6 @@
-'From Cuis 4.2 of 25 July 2013 [latest update: #1969] on 29 April 2014 at 10:43:01.653714 pm'!
+'From Cuis 4.2 of 25 July 2013 [latest update: #2463] on 3 September 2015 at 10:28:21.690306 pm'!
 'Description Please enter a description for this package'!
-!provides: 'FileMan-Adaptor-FileDirectory' 1 3!
+!provides: 'FIleMan-Adaptor-FileDirectory' 1 5!
 !requires: 'FileMan-Core' 1 3 nil!
 !classDefinition: #FmFileDirectoryFileIOAccessorCuis category: #'FileMan-Adaptor-FileDirectory'!
 FmFileIOAccessor subclass: #FmFileDirectoryFileIOAccessorCuis
@@ -23,18 +23,24 @@ asFileDirectory
 
 	^FileDirectory on: self pathName! !
 
-!FmFileDirectoryFileIOAccessorCuis methodsFor: 'actions' stamp: 'mu 4/6/2008 14:10'!
+!FmFileDirectoryFileIOAccessorCuis methodsFor: 'actions' stamp: 'jmv 6/7/2015 00:23'!
 asAbsolutePathName: aString
 	"Not complete, but in most cases it is OK"
 
 	| tokens curDir childPath |
+	tokens := aString asPathTokens.
 
-	aString isRelativePathName ifFalse: [^aString].
+	"Already an absolute path name? just normalize path separators"
+	aString isAbsolutePathName ifTrue: [
+		^String streamContents: [ :strm |
+			aString first isPathSeparator ifTrue: [ strm nextPutAll: self slash ].
+			tokens
+				do: [ :each | strm nextPutAll: each ]
+				separatedBy: [ strm nextPutAll: self slash ]]].
 
 	aString = '.' ifTrue: [^self defaultDirectoryPath].
 	aString = '..' ifTrue: [^self containingDirectoryPathOf: self defaultDirectoryPath].
 
-	tokens := aString asPathTokens.
 
 	curDir := self defaultDirectoryPath.
 	tokens reverseDo: [:each |
@@ -91,17 +97,15 @@ basicDirectoryExists: fullPathName
 concreteStreamClass
 	^FileStream concreteStream! !
 
-!FmFileDirectoryFileIOAccessorCuis methodsFor: 'private' stamp: 'mu 4/5/2008 13:32'!
+!FmFileDirectoryFileIOAccessorCuis methodsFor: 'private' stamp: 'jmv 6/7/2015 00:23'!
 containingDirectoryPathOf: pathName 
-	| lastIndex |
-	lastIndex := 0.
+
 	(((pathName isNil
 			or: [pathName isEmpty])
 			or: [pathName isPathSeparator])
 			or: [pathName isDriveName])
 		ifTrue: [^ nil].
-	'\:/' do: [:each | lastIndex := ( pathName lastIndexOf: each) max: lastIndex].
-	^ pathName copyFrom: 1 to: lastIndex - 1! !
+	^ pathName copyFrom: 1 to: pathName indexOfLastPathSeparator-1! !
 
 !FmFileDirectoryFileIOAccessorCuis methodsFor: 'actions' stamp: 'MU 3/26/2014 12:34'!
 copy: fromFileFullName to: toFileFullName 
@@ -114,7 +118,7 @@ copy: fromFileFullName to: toFileFullName
 			writeStr
 				ifNotNil: [:w | w close]]! !
 
-!FmFileDirectoryFileIOAccessorCuis methodsFor: 'utilities' stamp: 'mu 4/2/2008 17:15'!
+!FmFileDirectoryFileIOAccessorCuis methodsFor: 'utilities' stamp: 'mu 9/3/2015 22:25'!
 copyFile: fileStream1 toFile: fileStream2
 	| buffer |
 	buffer := String new: 50000.
