@@ -1,6 +1,6 @@
-'From Cuis 4.2 of 25 July 2013 [latest update: #2463] on 3 September 2015 at 10:21:05.558306 pm'!
+'From Cuis 4.2 of 25 July 2013 [latest update: #2463] on 3 September 2015 at 11:27:14.163005 pm'!
 'Description Please enter a description for this package'!
-!provides: 'FileMan-Core' 1 3!
+!provides: 'FileMan-Core' 1 5!
 !classDefinition: #FmFileEntry category: #'FileMan-Core'!
 Object subclass: #FmFileEntry
 	instanceVariableNames: 'drive pathComponents parent name fileSize creationTime modificationTime isDirectory options'
@@ -823,14 +823,12 @@ printPathOn: aStream
 		do: [:each | aStream nextPutAll: each]
 		separatedBy: [aStream nextPutAll: self slash]! !
 
-!FmFileEntry methodsFor: 'accessing-stream' stamp: 'MU 9/3/2015 22:19'!
+!FmFileEntry methodsFor: 'accessing-stream' stamp: 'mu 9/3/2015 23:09'!
 readStream
 	
-	^ [self fileAccessor readOnlyFileNamed: self pathName]
-		on: FmFileIOAccessor fileDoesNotExistException
-		do: [:ex |
-			self assureExistence.
-			ex retry]! !
+	^self readStreamIfError: [:ex |
+		self assureExistence.
+		ex retry]! !
 
 !FmFileEntry methodsFor: 'accessing-stream' stamp: 'MU 3/26/2014 12:41'!
 readStreamContents: blockWithArg 
@@ -840,6 +838,13 @@ readStreamContents: blockWithArg
 		ensure: [stream
 				ifNotNil: [:s | s close]].
 	^ conts! !
+
+!FmFileEntry methodsFor: 'accessing-stream' stamp: 'mu 9/3/2015 23:07'!
+readStreamIfError: errorHandlingBlock
+	
+	^ [self fileAccessor readOnlyFileNamed: self pathName]
+		on: FmFileIOAccessor fileDoesNotExistException
+		do: [:ex | errorHandlingBlock value: ex]! !
 
 !FmFileEntry methodsFor: 'initialize-release' stamp: 'mu 9/13/2006 19:36'!
 refresh
@@ -905,6 +910,16 @@ textContents: aString by: encoderName
 textContentsBy: encoderName 
 	^self contentsOf: self readStream by: encoderName! !
 
+!FmFileEntry methodsFor: 'accessing-stream' stamp: 'mu 9/3/2015 23:07'!
+tryReadStream
+	
+	^ self fileAccessor readOnlyFileNamed: self pathName! !
+
+!FmFileEntry methodsFor: 'accessing-stream' stamp: 'mu 9/3/2015 23:10'!
+tryWriteStream
+	self refresh.
+	^self fileAccessor newFileNamed: self pathName! !
+
 !FmFileEntry methodsFor: 'accessing-file name' stamp: 'mu 6/19/2006 23:28'!
 version
 	^self nameVersionExtension second! !
@@ -927,6 +942,14 @@ writeStreamContents: blockWithArg
 	[blockWithArg value: stream]
 		ensure: [stream
 				ifNotNil: [:s | s close]]! !
+
+!FmFileEntry methodsFor: 'accessing-stream' stamp: 'mu 9/3/2015 23:21'!
+writeStreamIfError: errorHandlingBlock
+	self refresh.
+		
+	^[self fileAccessor newFileNamed: self pathName]
+		on: FmFileIOAccessor fileExistsException
+		do: [:ex | errorHandlingBlock value: ex]! !
 
 !FmFileEntry class methodsFor: 'factory' stamp: 'mu 3/27/2007 23:06'!
 directoryEntryClass
@@ -1868,6 +1891,10 @@ dialectUtilClass: aDialectSpecificPortableUtil
 fileDoesNotExistException
 	^self dialectUtilClass fileDoesNotExistException! !
 
+!FmFileIOAccessor class methodsFor: 'accessing exception' stamp: 'mu 9/3/2015 23:25'!
+fileExistsException
+	^self dialectUtilClass fileExistsException! !
+
 !FmFileIOAccessor class methodsFor: 'class initialization' stamp: 'mu 3/26/2013 01:34'!
 initDefault
 	Default := nil! !
@@ -1918,6 +1945,10 @@ addToStartUpList: aClass
 
 !FmPortableUtil class methodsFor: 'accessing' stamp: 'mu 3/24/2013 00:47'!
 fileDoesNotExistException
+	^nil! !
+
+!FmPortableUtil class methodsFor: 'accessing' stamp: 'mu 9/3/2015 23:26'!
+fileExistsException
 	^nil! !
 
 !FmPortableUtil class methodsFor: 'actions' stamp: 'mu 3/26/2013 01:19'!
