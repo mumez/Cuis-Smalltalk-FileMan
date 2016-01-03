@@ -5,9 +5,9 @@ FileMan is a thin wrapper for various Smalltalk file libraries. It provides simp
 For more info, please see the Cypress repository:
 [https://github.com/mumez/FileMan](https://github.com/mumez/FileMan)
 
-## Installation ##
+***Note: From update 2353, FileMan has already been included in [Cuis-Smalltalk-Dev](https://github.com/Cuis-Smalltalk/Cuis-Smalltalk-Dev) image. This repository is kept for historical reasons.***
 
-Note: From update 2353, FileMan has already been installed in Cuis-Smalltalk-Dev image.
+## Installation ##
 
 Assuming Cuis 4.2 or higher.
 
